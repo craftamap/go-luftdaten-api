@@ -6,6 +6,7 @@ type SensorData struct {
 	SensorId         int               `json:"esp8266id,string"`
 	SoftwareVersion  string            `json:"software_version"`
 	SensorDataValues []SensorDataValue `json:"sensordatavalues"`
+	Date             int64
 }
 
 type SensorDataValue struct {
@@ -15,6 +16,7 @@ type SensorDataValue struct {
 
 func (s SensorData) FlattenToMap() map[string]interface{} {
 	dataMap := make(map[string]interface{})
+	dataMap["date"] = s.Date
 	dataMap["SensorId"] = s.SensorId
 
 	for _, e := range s.SensorDataValues {
@@ -25,6 +27,7 @@ func (s SensorData) FlattenToMap() map[string]interface{} {
 
 func (s SensorData) FlattenToArray() []string {
 	var dataArray []string
+	dataArray = append(dataArray, fmt.Sprintf("%d", s.Date))
 	dataArray = append(dataArray, fmt.Sprintf("%d", s.SensorId))
 
 	for _, e := range s.SensorDataValues {

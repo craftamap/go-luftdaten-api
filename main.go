@@ -1,14 +1,14 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	ds "github.com/craftamap/go-luftdaten-api/datastructs"
+	helper "github.com/craftamap/go-luftdaten-api/helper"
 	flag "github.com/spf13/pflag"
 	"log"
 	"net/http"
-	"os"
+	"time"
 )
 
 func logging(f http.HandlerFunc) http.HandlerFunc {
@@ -19,8 +19,14 @@ func logging(f http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	helper.OpenDb()
+	defer helper.CloseDb()
+
+	helper.CreateDatabase()
+
 	port := flag.IntP("port", "p", 8080, "port of web-server")
 	addr := flag.String("address", "0.0.0.0", "address of web-server")
+	csvEnabled := flag.Bool("csv", true, "Enables or disables csv writing")
 	csvFile := flag.StringP("outputfile", "o", "", "file to output to")
 	flag.Parse()
 
@@ -29,17 +35,12 @@ func main() {
 			if r.Method == "POST" {
 				var sData ds.SensorData
 				json.NewDecoder(r.Body).Decode(&sData)
+				sData.Date = time.Now().Unix()
+				if *csvEnabled {
+					helper.WriteCsv(csvFile, &sData)
+				}
+				helper.InsertData(&sData)
 
-				f, _ := os.OpenFile(*csvFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
-				defer f.Close()
-
-				csvW := csv.NewWriter(f)
-				defer csvW.Flush()
-
-				flattenedData := sData.FlattenToArray()
-				log.Printf("%s", flattenedData)
-
-				csvW.Write(flattenedData)
 			} else {
 				http.Redirect(w, r, r.URL.Hostname(), 301)
 			}
